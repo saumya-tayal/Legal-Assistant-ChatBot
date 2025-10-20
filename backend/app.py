@@ -13,13 +13,21 @@ load_dotenv()
 
 # ---- LOAD YOUR DATA ----
 try:
-    # Load index.csv with correct column names
-    index_df = pd.read_csv("data/index.csv")
-    # Rename columns to match what your code expects
-    index_df = index_df.rename(columns={
-        "Parts of the Indian Constitution": "Heading",
-        "Subject Mentioned in the Part": "Description" 
-    })
+    # Get the current directory path
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(current_dir, 'data')
+    
+    index_df = pd.read_csv(os.path.join(data_dir, "index.csv"))
+    constitution_df = pd.read_csv(os.path.join(data_dir, "Constitution Of India.csv"))
+    
+    print("Data loaded successfully!")
+    print(f"Data directory: {data_dir}")
+    
+except FileNotFoundError as e:
+    print(f"Error loading CSV files: {e}")
+    # Create empty dataframes to prevent crashes
+    index_df = pd.DataFrame(columns=["Heading"])
+    constitution_df = pd.DataFrame(columns=["Heading", "Content"])
     
     # Load constitution data
     constitution_df = pd.read_csv("data/Constitution Of India.csv")
@@ -137,7 +145,8 @@ def home():
     })
 
 # ---- RUN SERVER ----
+# ---- RUN SERVER ----
 if __name__ == "__main__":
-    print("Starting LegalBot server...")
-    print("Test the server at: http://127.0.0.1:5000/")
-    app.run(debug=True, port=5000, host='127.0.0.1')
+    port = int(os.environ.get("PORT", 5000))
+    print(f"Starting LegalBot server on port {port}...")
+    app.run(host='0.0.0.0', port=port, debug=False)   
