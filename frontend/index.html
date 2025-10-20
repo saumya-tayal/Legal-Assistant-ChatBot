@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LegalBot - AI Legal Assistant</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            overflow: hidden;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .disclaimer {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px 30px;
+            font-size: 14px;
+            text-align: center;
+            border-radius: 0;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 30px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 18px;
+            line-height: 1.5;
+            font-size: 15px;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .input-container {
+            padding: 25px 30px 30px 30px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            margin-top: 10px;
+            flex-shrink: 0;
+        }
+
+        .input-form {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            /* vertically center the textarea and the send button */
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .message-input {
+            width: 100%;
+            padding: 13px 18px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s ease;
+            min-height: 48px;
+            /* match the send button height for single-line alignment */
+            max-height: 160px;
+            box-sizing: border-box;
+        }
+
+        /* Screen-reader-only utility */
+        .sr-only {
+            position: absolute !important;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .message-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: box-shadow 0.2s ease, transform 0.12s ease;
+            flex-shrink: 0;
+            /* static placement to the right of the input (no overlap) */
+            position: relative;
+        }
+
+        .send-button:hover {
+            box-shadow: 0 6px 18px rgba(102, 126, 234, 0.35);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: #6c757d;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #6c757d;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px 20px;
+            font-size: 16px;
+        }
+
+        .welcome-message h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .sample-questions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .sample-question {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 10px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .sample-question:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Sign In Page Styles */
+        .signin-container {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .signin-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .signin-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .signin-header h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            margin: 0 0 8px 0;
+            font-weight: 600;
+        }
+
+        .signin-header p {
+            color: #6c757d;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .signin-form {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+        }
+
+        .signin-button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-bottom: 20px;
+        }
+
+        .signin-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .signin-links {
+            text-align: center;
+        }
+
+        .signin-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .signin-links a:hover {
+            text-decoration: underline;
+        }
+
+        .signin-footer {
+            border-top: 1px solid #e9ecef;
+            padding-top: 20px;
+            text-align: center;
+        }
+
+        .signin-footer p {
+            color: #6c757d;
+            font-size: 13px;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        /* Header with logout button */
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logout-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+
+        .logout-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                height: 100%;
+            }
+
+            .header {
+                padding: 15px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .disclaimer {
+                padding: 12px 20px;
+                font-size: 13px;
+            }
+
+            .messages {
+                padding: 15px 20px;
+            }
+
+            .message-content {
+                max-width: 85%;
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
+            .input-container {
+                padding: 20px 20px 25px 20px;
+                margin-top: 8px;
+            }
+
+            .input-form {
+                gap: 8px;
+            }
+
+            .send-button {
+                width: 44px;
+                height: 44px;
+                align-self: center;
+            }
+
+            .sample-questions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .sample-question {
+                width: 100%;
+                max-width: 300px;
+                text-align: center;
+            }
+
+            .signin-card {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+
+            .signin-header h1 {
+                font-size: 28px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .logout-button {
+                align-self: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sign In Page -->
+    <div class="signin-container" id="signinContainer">
+        <div class="signin-card">
+            <div class="signin-header">
+                <h1>⚖️ LegalBot</h1>
+                <p>Your AI Legal Assistant</p>
+            </div>
+
+            <form class="signin-form" id="signinForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <button type="submit" class="signin-button">Sign In</button>
+
+                <div class="signin-links">
+                    <a href="#" onclick="showDemo()">Continue as Demo User</a>
+                </div>
+            </form>
+
+            <div class="signin-footer">
+                <p><strong>Demo Mode Available:</strong> You can explore the interface without signing in by clicking
+                    "Continue as Demo User" above.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Chat Interface -->
+    <div class="container" id="chatContainer" style="display: none;">
+        <header class="header">
+            <div class="header-content">
+                <div>
+                    <h1>⚖️ LegalBot</h1>
+                    <p>Your AI Legal Assistant</p>
+                </div>
+                <button class="logout-button" id="authButton">Sign Out</button>
+            </div>
+        </header>
+
+        <div class="disclaimer">
+            <strong>Demo Interface:</strong> This is a sample legal assistant interface. For actual legal advice, please
+            consult with a qualified attorney.
+        </div>
+
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="welcome-message">
+                    <h3>Welcome to LegalBot!</h3>
+                    <p>I'm here to help answer your legal questions. Please note that this is for informational purposes
+                        only and does not constitute legal advice.</p>
+
+                    <div class="sample-questions">
+                        <div class="sample-question" onclick="askSampleQuestion('What are my rights as a tenant?')">
+                            What are my rights as a tenant?
+                        </div>
+                        <div class="sample-question" onclick="askSampleQuestion('How do I start a small business?')">
+                            How do I start a small business?
+                        </div>
+                        <div class="sample-question"
+                            onclick="askSampleQuestion('What should I know about employment contracts?')">
+                            What about employment contracts?
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="message-avatar"
+                    style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white;">⚖️</div>
+                <span>LegalBot is typing</span>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <form class="input-form" id="messageForm">
+                    <div class="input-wrapper">
+                        <label for="messageInput" class="sr-only">Type your legal question</label>
+                        <textarea id="messageInput" class="message-input" placeholder="Ask me any legal question..."
+                            rows="1"></textarea>
+                    </div>
+                    <button type="submit" class="send-button" id="sendButton" aria-label="Send message">
+                        ➤
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const messagesContainer = document.getElementById('messages');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        let isFirstMessage = true;
+
+        // ==============================
+        // 🔐 SIGN-IN / DEMO / LOGOUT LOGIC
+        // ==============================
+        const signinForm = document.getElementById('signinForm');
+        const signinContainer = document.getElementById('signinContainer');
+        const chatContainer = document.getElementById('chatContainer');
+        const authButton = document.getElementById('authButton');
+        let isSignedIn = false; // tracks login state
+
+        function updateAuthButton() {
+            if (isSignedIn) {
+                authButton.textContent = 'Sign Out';
+                authButton.onclick = signOut;
+            } else {
+                authButton.textContent = 'Sign In';
+                authButton.onclick = () => {
+                    chatContainer.style.display = 'none';
+                    signinContainer.style.display = 'flex';
+                    document.getElementById('email').focus();
+                };
+            }
+        }
+
+        // Initialize auth button
+        updateAuthButton();
+
+        signinForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (email && password) {
+                isSignedIn = true;
+                updateAuthButton();
+                showChatInterface();
+            }
+        });
+
+        function showDemo() {
+            // Demo mode (no real login)
+            isSignedIn = false;
+            updateAuthButton();
+            showChatInterface();
+        }
+
+        function showChatInterface() {
+            signinContainer.style.display = 'none';
+            chatContainer.style.display = 'flex';
+            messageInput.focus();
+        }
+
+        function signOut() {
+            chatContainer.style.display = 'none';
+            signinContainer.style.display = 'flex';
+
+            // Reset chat area
+            messagesContainer.innerHTML = `
+            <div class="welcome-message">
+                <h3>Welcome to LegalBot!</h3>
+                <p>I'm here to help answer your legal questions. Please note that this is for informational purposes only and does not constitute legal advice.</p>
+                <div class="sample-questions">
+                    <div class="sample-question" onclick="askSampleQuestion('What are my rights as a tenant?')">
+                        What are my rights as a tenant?
+                    </div>
+                    <div class="sample-question" onclick="askSampleQuestion('How do I start a small business?')">
+                        How do I start a small business?
+                    </div>
+                    <div class="sample-question" onclick="askSampleQuestion('What should I know about employment contracts?')">
+                        What about employment contracts?
+                    </div>
+                </div>
+            </div>
+        `;
+
+            isFirstMessage = true;
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+            isSignedIn = false;
+            updateAuthButton();
+        }
+
+        // ==============================
+        // 💬 CHAT LOGIC
+        // ==============================
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Handle form submission
+        messageForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                sendMessage(message);
+            }
+        });
+
+        // Handle Enter key
+        messageInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                messageForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        function sendMessage(message) {
+            if (isFirstMessage) {
+                messagesContainer.innerHTML = '';
+                isFirstMessage = false;
+            }
+
+            addMessage(message, 'user');
+
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+
+            showTypingIndicator();
+
+            // Add error handling for the fetch request
+            fetch("http://127.0.0.1:5000/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({ message: message })
+            })
+                .then(async res => {
+                    if (!res.ok) {
+                        throw new Error(`Server error: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    hideTypingIndicator();
+                    if (data.response) {
+                        addMessage(data.response, "bot");
+                    } else {
+                        throw new Error("No response from server");
+                    }
+                })
+                .catch((error) => {
+                    hideTypingIndicator();
+                    console.error("Fetch error:", error);
+                    addMessage("Sorry, I'm having trouble connecting to the legal assistant service. Please make sure the backend server is running on port 5000.", "bot");
+                })
+                .finally(() => {
+                    messageInput.disabled = false;
+                    sendButton.disabled = false;
+                    messageInput.focus();
+                });
+        }
+
+        function addMessage(content, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = sender === 'user' ? '👤' : '⚖️';
+
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.textContent = content;
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            typingIndicator.style.display = 'flex';
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.style.display = 'none';
+        }
+
+        function askSampleQuestion(question) {
+            messageInput.value = question;
+            messageForm.dispatchEvent(new Event('submit'));
+        }
+        // Autofocus email field on load
+        window.addEventListener('load', () => {
+            document.getElementById('email').focus();
+        });
+    </script>
+
+    <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'99003dfba687a735',t:'MTc2MDcwODc4Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
+</body>
+
+</html>
