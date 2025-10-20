@@ -11,41 +11,47 @@ CORS(app, origins=["http://127.0.0.1:5500", "http://localhost:5500"])
 
 load_dotenv()
 
+# Initialize dataframes as empty
+index_df = pd.DataFrame()
+constitution_df = pd.DataFrame()
+
 # ---- LOAD YOUR DATA ----
 try:
     # Get the current directory path
     current_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(current_dir, 'data')
     
-    index_df = pd.read_csv(os.path.join(data_dir, "index.csv"))
-    constitution_df = pd.read_csv(os.path.join(data_dir, "Constitution Of India.csv"))
+    print(f"Looking for data in: {data_dir}")
     
-    print("Data loaded successfully!")
-    print(f"Data directory: {data_dir}")
-    
-except FileNotFoundError as e:
-    print(f"Error loading CSV files: {e}")
-    # Create empty dataframes to prevent crashes
-    index_df = pd.DataFrame(columns=["Heading"])
-    constitution_df = pd.DataFrame(columns=["Heading", "Content"])
-    
-    # Load constitution data
-    constitution_df = pd.read_csv("data/Constitution Of India.csv")
-    # Rename the single column to 'Content'
-    constitution_df = constitution_df.rename(columns={"Articles": "Content"})
-    
-    print("Data loaded successfully!")
-    print(f"Index columns: {index_df.columns.tolist()}")
-    print(f"Constitution columns: {constitution_df.columns.tolist()}")
-    
-except FileNotFoundError as e:
-    print(f"Error loading CSV files: {e}")
-    index_df = pd.DataFrame(columns=["Heading"])
-    constitution_df = pd.DataFrame(columns=["Content"])
+    # Check if data directory exists
+    if os.path.exists(data_dir):
+        print(f"Files in data directory: {os.listdir(data_dir)}")
+        
+        # Load index.csv - it has different column names
+        index_path = os.path.join(data_dir, "index.csv")
+        if os.path.exists(index_path):
+            index_df = pd.read_csv(index_path)
+            # Your index.csv has: "Parts of the Indian Constitution", "Subject Mentioned in the Part", "Articles in Indian Constitution"
+            print(f"Index columns: {index_df.columns.tolist()}")
+        else:
+            print("index.csv not found")
+        
+        # Load constitution.csv - it has "Articles" column
+        constitution_path = os.path.join(data_dir, "Constitution Of India.csv")
+        if os.path.exists(constitution_path):
+            constitution_df = pd.read_csv(constitution_path)
+            # Your constitution.csv has "Articles" column
+            print(f"Constitution columns: {constitution_df.columns.tolist()}")
+        else:
+            print("Constitution Of India.csv not found")
+            
+        print("Data loading completed!")
+        
+    else:
+        print("Data directory not found!")
+
 except Exception as e:
-    print(f"Unexpected error loading data: {e}")
-    index_df = pd.DataFrame(columns=["Heading"])
-    constitution_df = pd.DataFrame(columns=["Content"])
+    print(f"Error loading CSV files: {e}")
 
 # ---- FIND RELEVANT CLAUSE FUNCTION ----
 def find_relevant_clause(query):
@@ -55,23 +61,20 @@ def find_relevant_clause(query):
         if index_df.empty or constitution_df.empty:
             return "Constitutional database not available - using general knowledge."
             
-        # Get all available headings for matching
-        available_headings = index_df["Heading"].dropna().tolist()
-        print(f"Available headings: {len(available_headings)}")
-        print(f"Sample headings: {available_headings[:5]}")
-        
-        # Search for the closest heading match
-        matches = get_close_matches(query, available_headings, n=3, cutoff=0.3)
-        print(f"Found matches: {matches}")
-        
-        if matches:
-            # For now, we'll use the constitution data generally since the structure doesn't match perfectly
-            # Return some sample constitutional content
-            sample_content = constitution_df["Content"].head(3).tolist()
-            context = "\n\n".join([str(content) for content in sample_content if pd.notna(content)])
-            return f"Relevant constitutional context for {matches[0]}:\n\n{context}"
+        # Since your CSV structures don't match perfectly, use general approach
+        if not constitution_df.empty:
+            # Get some sample constitutional content
+            sample_content = constitution_df.iloc[:3]  # First 3 rows
+            if "Articles" in constitution_df.columns:
+                content_list = sample_content["Articles"].dropna().tolist()
+            else:
+                # Try first column if "Articles" doesn't exist
+                content_list = sample_content.iloc[:, 0].dropna().tolist()
+                
+            context = "\n\n".join([str(content) for content in content_list])
+            return f"Constitutional context:\n\n{context}"
         else:
-            return f"No specific constitutional match found for '{query}'. Using general constitutional knowledge."
+            return "No constitutional data available."
             
     except Exception as e:
         print(f"Error in find_relevant_clause: {e}")
@@ -91,7 +94,6 @@ def chat():
 
     # Retrieve relevant part of constitution
     context = find_relevant_clause(user_input)
-    print(f"Context retrieved")
 
     # Initialize Groq client
     groq_api_key = os.getenv("GROQ_API_KEY")
@@ -145,8 +147,7 @@ def home():
     })
 
 # ---- RUN SERVER ----
-# ---- RUN SERVER ----
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     print(f"Starting LegalBot server on port {port}...")
-    app.run(host='0.0.0.0', port=port, debug=False)   
+    app.run(host='0.0.0.0', port=port, debug=False)
