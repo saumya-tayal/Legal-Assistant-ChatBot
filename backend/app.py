@@ -5,6 +5,7 @@ from flask_cors import CORS
 import os
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
+import time
 
 app = Flask(__name__)
 CORS(app, origins=["http://127.0.0.1:5500", "http://localhost:5500"])
@@ -44,7 +45,7 @@ try:
             print(f"Constitution columns: {constitution_df.columns.tolist()}")
         else:
             print("Constitution Of India.csv not found")
-            
+        time.sleep(1)    
         print("Data loading completed!")
         
     else:
